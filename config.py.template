@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+# Kea DHCP Manager v4.2.1 - Конфигурация
+
+# === СЕТЕВЫЕ НАСТРОЙКИ ===
+PORT = 8080
+
+# === ПУТИ KEA ===
+KEA_CONFIG = "/var/lib/kea/kea-dhcp4.conf"
+KEA_LEASES = "/var/lib/kea/leases.csv"
+KEA_SOCKET = "/run/kea/dhcp4.sock"
+
+# === БЭКАПЫ ===
+DHCP_BACKUP_DIR = "/var/lib/kea/backups"
+
+# === КЭШИ И ЛОГИ ===
+PING_CACHE_FILE = "/var/lib/kea/ping_cache.json"
+LOG_FILE = "/var/log/kea-manager.log"
+PING_INTERVAL = 3600  # 1 час
+
+# === ВНЕШНИЕ УТИЛИТЫ ===
+WEBHOOK = "/usr/local/bin/foreman-kea-webhook.sh"
+
+# === ДОМЕН ===
+DOMAIN_SUFFIX = "ваш.домен"
+
+# === АУТЕНТИФИКАЦИЯ ===
+AUTH_ENABLED = True
+AUTH_USERNAME = "имя"
+AUTH_PASSWORD = "пароль"
+
+# === DDNS ЧЕРЕЗ NSUPDATE ===
+DDNS_ENABLED = True
+DDNS_SERVER = "127.0.0.1"  # Сервер DNS (BIND)
+DDNS_PORT = 53
+DDNS_ZONE = "ваш.домен_с_точкой_на_конце."  # Зона для обновления
+DDNS_KEY_NAME = "kea-ddns"  # Имя ключа
+DDNS_KEY_ALGORITHM = "hmac-sha512" # Замените на свой
+DDNS_KEY_SECRET = "тут_ключ"
+DDNS_TTL = 3600  # TTL записей (секунды)
+
+# === ВЕРСИЯ ===
+VERSION = "4.2.1"
+
+# === FAVICON ===
+FAVICON_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><text y=".9em" font-size="58">⚡</text></svg>'''
