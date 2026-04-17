@@ -392,6 +392,16 @@ class WebServer:
                     mac = params.get('mac', [None])[0]
                     ip = params.get('ip', [None])[0]
                     if kea_manager.remove_reservation(mac, ip):
+                        # ✅ После снятия резервации обновляем активные аренды
+                        kea_manager.get_active_leases()
+                        self.send_response(303)
+                        self.send_header('Location', '/?nocache=' + str(int(time.time())))
+                        self.end_headers()
+                        return
+                if action == 'delete_lease':
+                    mac = params.get('mac', [None])[0]
+                    ip = params.get('ip', [None])[0]
+                    if kea_manager.delete_lease(ip):
                         self.send_response(303)
                         self.send_header('Location', '/')
                         self.end_headers()
@@ -508,10 +518,27 @@ class WebServer:
                 ping_cache = network_checker.load_ping_cache()
                 leases_by_subnet = {}
                 seen_macs = set()
+                # Сначала добавляем все резервации из конфига
+                for mac, res in reservations.items():
+                    ip = res['ip']
+                    ping_status = ping_cache.get(ip, {}).get('online', None)
+                    lease = {
+                        'ip': ip, 'mac': mac, 'hostname': res.get('hostname', ''),
+                        'expire': 0, 'subnet_id': res['subnet_id'], 'pool_id': 0,
+                        'is_reserved': True, 'is_active': False,
+                        'ping_status': ping_status, 'is_spoofed': False
+                    }
+                    key = f"{res['subnet_id']}|0"
+                    if key not in leases_by_subnet:
+                        leases_by_subnet[key] = {'subnet_id': res['subnet_id'], 'pool_id': 0, 'leases': []}
+                    leases_by_subnet[key]['leases'].append(lease)
+                    seen_macs.add(mac)
+                # Добавляем активные аренды только если MAC нет в резервациях
                 for lease in active_leases:
                     mac = lease['mac']
-                    seen_macs.add(mac)
-                    lease['is_reserved'] = mac in reservations
+                    if mac in seen_macs:
+                        continue
+                    lease['is_reserved'] = False
                     lease['ping_status'] = ping_cache.get(lease['ip'], {}).get('online', None)
                     lease['is_spoofed'] = False
                     key = f"{lease['subnet_id']}|{lease['pool_id']}"
@@ -519,20 +546,6 @@ class WebServer:
                         leases_by_subnet[key] = {'subnet_id': lease['subnet_id'], 'pool_id': lease['pool_id'],
                                                  'leases': []}
                     leases_by_subnet[key]['leases'].append(lease)
-                for mac, res in reservations.items():
-                    if mac not in seen_macs:
-                        ip = res['ip']
-                        ping_status = ping_cache.get(ip, {}).get('online', None)
-                        lease = {
-                            'ip': ip, 'mac': mac, 'hostname': res.get('hostname', ''),
-                            'expire': 0, 'subnet_id': res['subnet_id'], 'pool_id': 0,
-                            'is_reserved': True, 'is_active': False,
-                            'ping_status': ping_status, 'is_spoofed': False
-                        }
-                        key = f"{res['subnet_id']}|0"
-                        if key not in leases_by_subnet:
-                            leases_by_subnet[key] = {'subnet_id': res['subnet_id'], 'pool_id': 0, 'leases': []}
-                        leases_by_subnet[key]['leases'].append(lease)
                 total_leases = sum(len(d['leases']) for d in leases_by_subnet.values())
                 total_reserved = sum(1 for d in leases_by_subnet.values() for l in d['leases'] if l['is_reserved'])
                 total_active = sum(
