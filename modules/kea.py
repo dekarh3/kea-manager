@@ -688,4 +688,3 @@ class KeaManager:
             self._log(f"❌ ERROR refresh_all_dns: {e}")
             self._log(f"❌ Traceback: {traceback.format_exc()}")
             return {'success': False, 'error': str(e)}
-
