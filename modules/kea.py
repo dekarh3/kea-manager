@@ -532,7 +532,7 @@ class KeaManager:
                 # subprocess.run(['systemctl', 'restart', 'kea-dhcp4'], timeout=30, check=True)
 
                 self._log(f"✅ Reservation removed: {ip} {mac}")
-
+                
                 # ✅ После удаления резервации создаём простую аренду (если клиент активен)
                 try:
                     self._log(f"🔄 Attempting to create new lease for {ip} ({mac})...")
@@ -549,7 +549,7 @@ class KeaManager:
                         self._log(f"⚠️ Lease creation returned non-zero result: {result}")
                 except Exception as e:
                     self._log(f"❌ Failed to create lease: {e}")
-
+                
                 return True
         except Exception as e:
             import traceback
