@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Kea DHCP Manager v4.2.1 - Конфигурация
+# Kea DHCP Manager v4.2.2 - Конфигурация
 
 # === СЕТЕВЫЕ НАСТРОЙКИ ===
 PORT = 8080
@@ -39,7 +39,7 @@ DDNS_KEY_SECRET = "тут_ключ"
 DDNS_TTL = 3600  # TTL записей (секунды)
 
 # === ВЕРСИЯ ===
-VERSION = "4.2.1"
+VERSION = "4.2.2"
 
 # === FAVICON ===
 FAVICON_SVG = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><text y=".9em" font-size="58">⚡</text></svg>'''

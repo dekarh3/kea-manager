@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Kea DHCP Manager v4.2.0 - Web Server
+# Kea DHCP Manager v4.2.2 - Web Server
 # FIX: Добавлена подробная диагностика ошибки 'refresh_all_dns'
 
 import http.server
@@ -568,6 +568,21 @@ class WebServer:
                         leases_by_subnet[key] = {'subnet_id': lease['subnet_id'], 'pool_id': lease['pool_id'],
                                                  'leases': []}
                     leases_by_subnet[key]['leases'].append(lease)
+                # Добавляем spoofed записи (IP пингуется, но нет в Kea)
+                for ip, cache_data in ping_cache.items():
+                    if cache_data.get('online') and not cache_data.get('known'):
+                        # Это spoofed устройство
+                        subnet_id = cache_data.get('subnet_id', 1)
+                        spoofed_lease = {
+                            'ip': ip, 'mac': cache_data.get('mac', ''), 'hostname': '',
+                            'expire': 0, 'subnet_id': subnet_id, 'pool_id': 0,
+                            'is_reserved': False, 'is_active': False,
+                            'ping_status': True, 'is_spoofed': True
+                        }
+                        key = f"{subnet_id}|0"
+                        if key not in leases_by_subnet:
+                            leases_by_subnet[key] = {'subnet_id': subnet_id, 'pool_id': 0, 'leases': []}
+                        leases_by_subnet[key]['leases'].append(spoofed_lease)
                 total_leases = sum(len(d['leases']) for d in leases_by_subnet.values())
                 total_reserved = sum(1 for d in leases_by_subnet.values() for l in d['leases'] if l['is_reserved'])
                 total_active = sum(
@@ -688,11 +703,11 @@ Socket: {KEA_SOCKET} | Обновлено: <span id="update-time"></span>
 </div>
 <div class="stats">
 <div class="stat total" onclick="filterTable('all')"><div class="stat-num">{total_leases}</div><div class="stat-label">Всего записей</div></div>
-<div class="stat active" onclick="filterTable('active')"><div class="stat-num">{total_active}</div><div class="stat-label">Активных лизов</div></div>
+<div class="stat active" onclick="filterTable('active')"><div class="stat-num">{total_active}</div><div class="stat-label">Динамических</div></div>
 <div class="stat active" onclick="filterTable('online')"><div class="stat-num">{total_online}</div><div class="stat-label">🟢 Active</div></div>
 <div class="stat inactive" onclick="filterTable('inactive')"><div class="stat-num">{total_inactive}</div><div class="stat-label">🔴 Inactive</div></div>
 <div class="stat spoofed" onclick="filterTable('spoofed')"><div class="stat-num">{total_spoofed}</div><div class="stat-label">👻 Spoofed</div></div>
-<div class="stat reserved" onclick="filterTable('reserved')"><div class="stat-num">{total_reserved}</div><div class="stat-label">Постоянных</div></div>
+<div class="stat reserved" onclick="filterTable('reserved')"><div class="stat-num">{total_reserved}</div><div class="stat-label">Статических</div></div>
 </div>
 ''')
                 subnet_ids = sorted(set(d['subnet_id'] for d in leases_by_subnet.values()) | set(subnets_config.keys()))
