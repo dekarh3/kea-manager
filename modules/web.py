@@ -134,7 +134,7 @@ function filterTable(filterType) {
     });
     if (filterType !== 'all') {
         filterInfo.classList.add('visible');
-        const filterNames = {'active': 'Активные лизы', 'reserved': 'Постоянные', 'online': '🟢 Active', 'inactive': '🔴 Inactive', 'unknown': '⚪ Unknown', 'spoofed': '👻 Spoofed'};
+        const filterNames = {'active': 'Динамические', 'reserved': 'Статические', 'online': '🟢 Active', 'inactive': '🔴 Inactive', 'unknown': '⚪ Unknown', 'spoofed': '👻 Spoofed'};
         filterName.textContent = filterNames[filterType] || filterType;
         const activeCard = document.querySelector(`.stat[onclick="filterTable('${filterType}')"]`);
         if (activeCard) { activeCard.classList.add('active-filter'); }
@@ -317,6 +317,15 @@ class WebServer:
                         self.send_header('Location', '/?nocache=' + str(int(time.time())))
                         self.end_headers()
                         return
+                if action == 'scan':
+                    thread = threading.Thread(target=network_checker.run_ping_check,
+                                              args=(kea_manager, ping_in_progress_flag))
+                    thread.daemon = True
+                    thread.start()
+                    self.send_response(303)
+                    self.send_header('Location', '/?nocache=' + str(int(time.time())))
+                    self.end_headers()
+                    return
                 if action == 'export_xlsx':
                     self.export_xlsx()
                     return
@@ -588,7 +597,7 @@ class WebServer:
                     if is_spoofed:
                         return '<span class="badge badge-spoofed">👻 Spoofed</span>'
                     if is_reserved or not expire_ts or expire_ts == 0:
-                        return '<span class="badge badge-reserved">🔒 Постоянные</span>'
+                        return '<span class="badge badge-reserved">🔒 Статические</span>'
                     try:
                         dt = datetime.fromtimestamp(expire_ts)
                         now = datetime.now()
@@ -715,7 +724,7 @@ Socket: {KEA_SOCKET} | Обновлено: <span id="update-time"></span>
                             1 for l in leases if l.get('ping_status') == True and not l.get('is_reserved', False))
                         count_free = max(0, pool_total - count_reserved - count_active_non_reserved)
                         html_parts.append(f'''<div class="pool-info">
-<div class="pool-stats"><strong>Пул {pool_idx + 1}:</strong> {pool_range} | Всего в пуле: <strong>{pool_total}</strong> | Активно: <strong>{count_active}</strong> | Постоянные: <strong>{count_reserved}</strong> | Свободно: <strong>{count_free}</strong></div>
+<div class="pool-stats"><strong>Пул {pool_idx + 1}:</strong> {pool_range} | Всего в пуле: <strong>{pool_total}</strong> | Активно: <strong>{count_active}</strong> | Статические: <strong>{count_reserved}</strong> | Свободно: <strong>{count_free}</strong></div>
 <div class="pool-actions">
 <button class="btn btn-ping" onclick="location.href='/?action=scan'">🔄 Сеть</button>
 <button class="btn btn-export" onclick="location.href='/?action=export_xlsx'">📊 В .xlsx</button>
