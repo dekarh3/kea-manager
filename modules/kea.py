@@ -96,8 +96,10 @@ class KeaManager:
 
     def get_active_leases(self):
         """Получение активных лизов"""
+        self._log("📡 Fetching active leases via lease4-get-all...")
         result = self.socket_command("lease4-get-all")
         if result.get("result") != 0:
+            self._log(f"⚠️ lease4-get-all failed: {result}")
             return []
 
         leases = []
@@ -117,6 +119,7 @@ class KeaManager:
                 })
             except:
                 pass
+        self._log(f"✅ Found {len(leases)} active leases")
         return leases
 
     def get_reservations_from_config(self):
@@ -528,10 +531,25 @@ class KeaManager:
                 # subprocess.run(['chown', 'root:kea', self.config_path], check=True)
                 # subprocess.run(['systemctl', 'restart', 'kea-dhcp4'], timeout=30, check=True)
 
-                # ✅ v4.2.1: Удаляем лиз чтобы не осталось старой записи
-                self.socket_command("lease4-del", {"ip-address": ip})
-
                 self._log(f"✅ Reservation removed: {ip} {mac}")
+                
+                # ✅ После удаления резервации создаём простую аренду (если клиент активен)
+                try:
+                    self._log(f"🔄 Attempting to create new lease for {ip} ({mac})...")
+                    lease_params = {
+                        "ip-address": ip,
+                        "hw-address": mac,
+                        "lifetime": 86400  # 24 часа
+                    }
+                    self._log(f"📝 Lease params: {lease_params}")
+                    result = self.socket_command("lease4-add", lease_params)
+                    if result.get('result') == 0:
+                        self._log(f"✅ Lease created successfully: {ip}")
+                    else:
+                        self._log(f"⚠️ Lease creation returned non-zero result: {result}")
+                except Exception as e:
+                    self._log(f"❌ Failed to create lease: {e}")
+                
                 return True
         except Exception as e:
             import traceback

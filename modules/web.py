@@ -27,7 +27,7 @@ except ImportError:
     XLSX_AVAILABLE = False
 
 # ============================================================================
-# CSS СТИЛИ (без изменений)
+# CSS СТИЛИ
 # ============================================================================
 HTML_STYLES = '''
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; margin: 0; padding: 20px; background: #f5f7fa; }
@@ -46,11 +46,11 @@ h1 { color: #0066cc; border-bottom: 3px solid #0066cc; padding-bottom: 12px; mar
 .stat-num { font-size: 28px; font-weight: 700; color: #1a1a1a; }
 .stat-label { color: #555; font-size: 13px; margin-top: 4px; }
 table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e0e0e0; }
-th { background: #0066cc; color: white; font-weight: 600; }
+th, td { padding: 1px 4px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+th { background: #0066cc; color: white; font-weight: 600; position: sticky; top: 100px; z-index: 30; }
 tr:hover { filter: brightness(0.95); }
 tr.filtered { display: none; }
-.btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-right: 8px; }
+.btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 6px; white-space: nowrap; }
 .btn-reserve { background: #28a745; color: white; }
 .btn-unreserve { background: #dc3545; color: white; }
 .btn-delete { background: #6c757d; color: white; }
@@ -68,7 +68,9 @@ code { background: #f1f3f5; padding: 3px 6px; border-radius: 3px; font-family: m
 .badge-unknown { background: #fff3cd; color: #856404; }
 .badge-reserved { background: #6c757d; color: white; }
 .badge-spoofed { background: #f8bbd0; color: #880e4f; }
-.pool-info { background: #f8f9fa; padding: 10px 15px; border-radius: 6px; margin: 10px 0; font-size: 13px; }
+.pool-info { background: #f8f9fa; padding: 10px 15px; border-radius: 6px; margin: 10px 0; font-size: 13px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; position: sticky; top: 50px; z-index: 20; }
+.pool-stats { display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
+.pool-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .footer { margin-top: 25px; padding-top: 15px; border-top: 1px solid #eee; font-size: 11px; color: #777; }
 .form-inline { display: inline-flex; gap: 4px; align-items: center; }
 .socket-status { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
@@ -80,7 +82,7 @@ code { background: #f1f3f5; padding: 3px 6px; border-radius: 3px; font-family: m
 .filter-info { background: #e3f2fd; padding: 10px 15px; border-radius: 6px; margin-bottom: 20px; display: none; align-items: center; gap: 10px; }
 .filter-info.visible { display: flex; }
 .filter-info strong { color: #0066cc; }
-.subnet-tabs { display: flex; gap: 4px; margin-bottom: 15px; border-bottom: 2px solid #e0e0e0; padding-bottom: 0; overflow-x: auto; }
+.subnet-tabs { display: flex; gap: 4px; margin-bottom: 15px; border-bottom: 2px solid #e0e0e0; padding-bottom: 0; overflow-x: auto; position: sticky; top: 0; z-index: 40; background: white; padding-top: 10px; }
 .subnet-tab { padding: 10px 20px; background: #f1f3f5; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 13px; font-weight: 500; color: #555; transition: all 0.2s; white-space: nowrap; }
 .subnet-tab:hover { background: #e3f2fd; color: #0066cc; }
 .subnet-tab.active { background: #0066cc; color: white; }
@@ -103,6 +105,15 @@ code { background: #f1f3f5; padding: 3px 6px; border-radius: 3px; font-family: m
 HTML_SCRIPTS = '''
 <script>
 let currentFilter = 'all';
+
+// Сохранение и восстановление активной вкладки через localStorage
+document.addEventListener('DOMContentLoaded', function() {
+    const savedSubnet = localStorage.getItem('activeSubnet');
+    if (savedSubnet) {
+        switchSubnet(savedSubnet);
+    }
+});
+
 function filterTable(filterType) {
     currentFilter = filterType;
     const rows = document.querySelectorAll('.filter-row');
@@ -138,6 +149,8 @@ window.switchSubnet = function switchSubnet(subnetId) {
     const tabEl = document.querySelector(`.subnet-tab[data-subnet="${subnetId}"]`);
     if (contentEl) contentEl.classList.add('active');
     if (tabEl) tabEl.classList.add('active');
+    // Сохраняем активную вкладку в localStorage
+    localStorage.setItem('activeSubnet', subnetId);
     updateTabCounts();
 }
 function updateTabCounts() {
@@ -392,6 +405,16 @@ class WebServer:
                     mac = params.get('mac', [None])[0]
                     ip = params.get('ip', [None])[0]
                     if kea_manager.remove_reservation(mac, ip):
+                        # ✅ После снятия резервации обновляем активные аренды
+                        kea_manager.get_active_leases()
+                        self.send_response(303)
+                        self.send_header('Location', '/?nocache=' + str(int(time.time())))
+                        self.end_headers()
+                        return
+                if action == 'delete_lease':
+                    mac = params.get('mac', [None])[0]
+                    ip = params.get('ip', [None])[0]
+                    if kea_manager.delete_lease(ip):
                         self.send_response(303)
                         self.send_header('Location', '/')
                         self.end_headers()
@@ -508,10 +531,27 @@ class WebServer:
                 ping_cache = network_checker.load_ping_cache()
                 leases_by_subnet = {}
                 seen_macs = set()
+                # Сначала добавляем все резервации из конфига
+                for mac, res in reservations.items():
+                    ip = res['ip']
+                    ping_status = ping_cache.get(ip, {}).get('online', None)
+                    lease = {
+                        'ip': ip, 'mac': mac, 'hostname': res.get('hostname', ''),
+                        'expire': 0, 'subnet_id': res['subnet_id'], 'pool_id': 0,
+                        'is_reserved': True, 'is_active': False,
+                        'ping_status': ping_status, 'is_spoofed': False
+                    }
+                    key = f"{res['subnet_id']}|0"
+                    if key not in leases_by_subnet:
+                        leases_by_subnet[key] = {'subnet_id': res['subnet_id'], 'pool_id': 0, 'leases': []}
+                    leases_by_subnet[key]['leases'].append(lease)
+                    seen_macs.add(mac)
+                # Добавляем активные аренды только если MAC нет в резервациях
                 for lease in active_leases:
                     mac = lease['mac']
-                    seen_macs.add(mac)
-                    lease['is_reserved'] = mac in reservations
+                    if mac in seen_macs:
+                        continue
+                    lease['is_reserved'] = False
                     lease['ping_status'] = ping_cache.get(lease['ip'], {}).get('online', None)
                     lease['is_spoofed'] = False
                     key = f"{lease['subnet_id']}|{lease['pool_id']}"
@@ -519,20 +559,6 @@ class WebServer:
                         leases_by_subnet[key] = {'subnet_id': lease['subnet_id'], 'pool_id': lease['pool_id'],
                                                  'leases': []}
                     leases_by_subnet[key]['leases'].append(lease)
-                for mac, res in reservations.items():
-                    if mac not in seen_macs:
-                        ip = res['ip']
-                        ping_status = ping_cache.get(ip, {}).get('online', None)
-                        lease = {
-                            'ip': ip, 'mac': mac, 'hostname': res.get('hostname', ''),
-                            'expire': 0, 'subnet_id': res['subnet_id'], 'pool_id': 0,
-                            'is_reserved': True, 'is_active': False,
-                            'ping_status': ping_status, 'is_spoofed': False
-                        }
-                        key = f"{res['subnet_id']}|0"
-                        if key not in leases_by_subnet:
-                            leases_by_subnet[key] = {'subnet_id': res['subnet_id'], 'pool_id': 0, 'leases': []}
-                        leases_by_subnet[key]['leases'].append(lease)
                 total_leases = sum(len(d['leases']) for d in leases_by_subnet.values())
                 total_reserved = sum(1 for d in leases_by_subnet.values() for l in d['leases'] if l['is_reserved'])
                 total_active = sum(
@@ -636,7 +662,7 @@ Socket: {KEA_SOCKET} | Обновлено: <span id="update-time"></span>
 <script>document.getElementById('update-time').textContent = new Date().toLocaleString('ru-RU')</script>
 | <a href="/" style="color: #0066cc;">🔄 Обновить</a>
 </p>
-<div class="toolbar">
+<div class="toolbar" style="display:none;">
 <form method="POST" style="display:inline;">
 <input type="hidden" name="action" value="ping_check">
 <button type="submit" class="btn btn-ping" onclick="this.disabled=true;this.textContent='Сканирование...'">📡 Сканировать сеть</button>
@@ -689,7 +715,12 @@ Socket: {KEA_SOCKET} | Обновлено: <span id="update-time"></span>
                             1 for l in leases if l.get('ping_status') == True and not l.get('is_reserved', False))
                         count_free = max(0, pool_total - count_reserved - count_active_non_reserved)
                         html_parts.append(f'''<div class="pool-info">
-<strong>Пул {pool_idx + 1}:</strong> {pool_range} | Всего в пуле: <strong>{pool_total}</strong> | Активно: <strong>{count_active}</strong> | Постоянные: <strong>{count_reserved}</strong> | Свободно: <strong>{count_free}</strong>
+<div class="pool-stats"><strong>Пул {pool_idx + 1}:</strong> {pool_range} | Всего в пуле: <strong>{pool_total}</strong> | Активно: <strong>{count_active}</strong> | Постоянные: <strong>{count_reserved}</strong> | Свободно: <strong>{count_free}</strong></div>
+<div class="pool-actions">
+<button class="btn btn-ping" onclick="location.href='/?action=scan'">🔄 Сеть</button>
+<button class="btn btn-export" onclick="location.href='/?action=export_xlsx'">📊 В .xlsx</button>
+<button class="btn btn-dns" onclick="location.href='/?action=refresh_dns'">⬇️ DNS</button>
+</div>
 </div>''')
                         if leases:
                             html_parts.append(
