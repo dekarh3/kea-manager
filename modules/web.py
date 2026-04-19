@@ -46,8 +46,8 @@ h1 { color: #0066cc; border-bottom: 3px solid #0066cc; padding-bottom: 12px; mar
 .stat-num { font-size: 28px; font-weight: 700; color: #1a1a1a; }
 .stat-label { color: #555; font-size: 13px; margin-top: 4px; }
 table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e0e0e0; }
-th { background: #0066cc; color: white; font-weight: 600; }
+th, td { padding: 5px 8px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+th { background: #0066cc; color: white; font-weight: 600; position: sticky; top: 0; z-index: 10; }
 tr:hover { filter: brightness(0.95); }
 tr.filtered { display: none; }
 .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-right: 8px; }
@@ -68,7 +68,9 @@ code { background: #f1f3f5; padding: 3px 6px; border-radius: 3px; font-family: m
 .badge-unknown { background: #fff3cd; color: #856404; }
 .badge-reserved { background: #6c757d; color: white; }
 .badge-spoofed { background: #f8bbd0; color: #880e4f; }
-.pool-info { background: #f8f9fa; padding: 10px 15px; border-radius: 6px; margin: 10px 0; font-size: 13px; }
+.pool-info { background: #f8f9fa; padding: 10px 15px; border-radius: 6px; margin: 10px 0; font-size: 13px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.pool-stats { display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
+.pool-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .footer { margin-top: 25px; padding-top: 15px; border-top: 1px solid #eee; font-size: 11px; color: #777; }
 .form-inline { display: inline-flex; gap: 4px; align-items: center; }
 .socket-status { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
@@ -103,6 +105,15 @@ code { background: #f1f3f5; padding: 3px 6px; border-radius: 3px; font-family: m
 HTML_SCRIPTS = '''
 <script>
 let currentFilter = 'all';
+
+// Сохранение и восстановление активной вкладки через localStorage
+document.addEventListener('DOMContentLoaded', function() {
+    const savedSubnet = localStorage.getItem('activeSubnet');
+    if (savedSubnet) {
+        switchSubnet(savedSubnet);
+    }
+});
+
 function filterTable(filterType) {
     currentFilter = filterType;
     const rows = document.querySelectorAll('.filter-row');
@@ -138,6 +149,8 @@ window.switchSubnet = function switchSubnet(subnetId) {
     const tabEl = document.querySelector(`.subnet-tab[data-subnet="${subnetId}"]`);
     if (contentEl) contentEl.classList.add('active');
     if (tabEl) tabEl.classList.add('active');
+    // Сохраняем активную вкладку в localStorage
+    localStorage.setItem('activeSubnet', subnetId);
     updateTabCounts();
 }
 function updateTabCounts() {
@@ -702,7 +715,12 @@ Socket: {KEA_SOCKET} | Обновлено: <span id="update-time"></span>
                             1 for l in leases if l.get('ping_status') == True and not l.get('is_reserved', False))
                         count_free = max(0, pool_total - count_reserved - count_active_non_reserved)
                         html_parts.append(f'''<div class="pool-info">
-<strong>Пул {pool_idx + 1}:</strong> {pool_range} | Всего в пуле: <strong>{pool_total}</strong> | Активно: <strong>{count_active}</strong> | Постоянные: <strong>{count_reserved}</strong> | Свободно: <strong>{count_free}</strong>
+<div class="pool-stats"><strong>Пул {pool_idx + 1}:</strong> {pool_range} | Всего в пуле: <strong>{pool_total}</strong> | Активно: <strong>{count_active}</strong> | Постоянные: <strong>{count_reserved}</strong> | Свободно: <strong>{count_free}</strong></div>
+<div class="pool-actions">
+<button class="btn btn-ping" onclick="location.href='/?action=scan'">📡 Сканировать сеть</button>
+<button class="btn btn-export" onclick="location.href='/?action=export_xlsx'">📊 Экспорт XLSX</button>
+<button class="btn btn-dns" onclick="location.href='/?action=refresh_dns'">🔄 Обновить DNS</button>
+</div>
 </div>''')
                         if leases:
                             html_parts.append(
