@@ -27,7 +27,7 @@ except ImportError:
     XLSX_AVAILABLE = False
 
 # ============================================================================
-# CSS СТИЛИ (без изменений)
+# CSS СТИЛИ
 # ============================================================================
 HTML_STYLES = '''
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; margin: 0; padding: 20px; background: #f5f7fa; }
@@ -46,11 +46,11 @@ h1 { color: #0066cc; border-bottom: 3px solid #0066cc; padding-bottom: 12px; mar
 .stat-num { font-size: 28px; font-weight: 700; color: #1a1a1a; }
 .stat-label { color: #555; font-size: 13px; margin-top: 4px; }
 table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-th, td { padding: 5px 8px; text-align: left; border-bottom: 1px solid #e0e0e0; }
-th { background: #0066cc; color: white; font-weight: 600; position: sticky; top: 0; z-index: 10; }
+th, td { padding: 1px 4px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+th { background: #0066cc; color: white; font-weight: 600; position: sticky; top: 100px; z-index: 30; }
 tr:hover { filter: brightness(0.95); }
 tr.filtered { display: none; }
-.btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-right: 8px; }
+.btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 6px; white-space: nowrap; }
 .btn-reserve { background: #28a745; color: white; }
 .btn-unreserve { background: #dc3545; color: white; }
 .btn-delete { background: #6c757d; color: white; }
@@ -68,9 +68,9 @@ code { background: #f1f3f5; padding: 3px 6px; border-radius: 3px; font-family: m
 .badge-unknown { background: #fff3cd; color: #856404; }
 .badge-reserved { background: #6c757d; color: white; }
 .badge-spoofed { background: #f8bbd0; color: #880e4f; }
-.pool-info { background: #f8f9fa; padding: 10px 15px; border-radius: 6px; margin: 10px 0; font-size: 13px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.pool-info { background: #f8f9fa; padding: 10px 15px; border-radius: 6px; margin: 10px 0; font-size: 13px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; position: sticky; top: 50px; z-index: 20; }
 .pool-stats { display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
-.pool-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.pool-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .footer { margin-top: 25px; padding-top: 15px; border-top: 1px solid #eee; font-size: 11px; color: #777; }
 .form-inline { display: inline-flex; gap: 4px; align-items: center; }
 .socket-status { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
@@ -82,7 +82,7 @@ code { background: #f1f3f5; padding: 3px 6px; border-radius: 3px; font-family: m
 .filter-info { background: #e3f2fd; padding: 10px 15px; border-radius: 6px; margin-bottom: 20px; display: none; align-items: center; gap: 10px; }
 .filter-info.visible { display: flex; }
 .filter-info strong { color: #0066cc; }
-.subnet-tabs { display: flex; gap: 4px; margin-bottom: 15px; border-bottom: 2px solid #e0e0e0; padding-bottom: 0; overflow-x: auto; }
+.subnet-tabs { display: flex; gap: 4px; margin-bottom: 15px; border-bottom: 2px solid #e0e0e0; padding-bottom: 0; overflow-x: auto; position: sticky; top: 0; z-index: 40; background: white; padding-top: 10px; }
 .subnet-tab { padding: 10px 20px; background: #f1f3f5; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 13px; font-weight: 500; color: #555; transition: all 0.2s; white-space: nowrap; }
 .subnet-tab:hover { background: #e3f2fd; color: #0066cc; }
 .subnet-tab.active { background: #0066cc; color: white; }
@@ -662,7 +662,7 @@ Socket: {KEA_SOCKET} | Обновлено: <span id="update-time"></span>
 <script>document.getElementById('update-time').textContent = new Date().toLocaleString('ru-RU')</script>
 | <a href="/" style="color: #0066cc;">🔄 Обновить</a>
 </p>
-<div class="toolbar">
+<div class="toolbar" style="display:none;">
 <form method="POST" style="display:inline;">
 <input type="hidden" name="action" value="ping_check">
 <button type="submit" class="btn btn-ping" onclick="this.disabled=true;this.textContent='Сканирование...'">📡 Сканировать сеть</button>
@@ -717,9 +717,9 @@ Socket: {KEA_SOCKET} | Обновлено: <span id="update-time"></span>
                         html_parts.append(f'''<div class="pool-info">
 <div class="pool-stats"><strong>Пул {pool_idx + 1}:</strong> {pool_range} | Всего в пуле: <strong>{pool_total}</strong> | Активно: <strong>{count_active}</strong> | Постоянные: <strong>{count_reserved}</strong> | Свободно: <strong>{count_free}</strong></div>
 <div class="pool-actions">
-<button class="btn btn-ping" onclick="location.href='/?action=scan'">📡 Сканировать сеть</button>
-<button class="btn btn-export" onclick="location.href='/?action=export_xlsx'">📊 Экспорт XLSX</button>
-<button class="btn btn-dns" onclick="location.href='/?action=refresh_dns'">🔄 Обновить DNS</button>
+<button class="btn btn-ping" onclick="location.href='/?action=scan'">🔄 Сеть</button>
+<button class="btn btn-export" onclick="location.href='/?action=export_xlsx'">📊 В .xlsx</button>
+<button class="btn btn-dns" onclick="location.href='/?action=refresh_dns'">⬇️ DNS</button>
 </div>
 </div>''')
                         if leases:
